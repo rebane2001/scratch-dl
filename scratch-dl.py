@@ -1,8 +1,8 @@
 import requests
 import argparse
-import zipfile
 import shutil
 import os
+import re
 import json
 
 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36"}
@@ -98,13 +98,14 @@ def download_project(project_id):
     return {"success": True, "version": version}
 
 
-'''
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="url")
-parser.add_argument("-p", "--path", help="Sven Co-op install path")
+#TODO: Add option to download metadata separately
+#parser.add_argument("-p", "--path", help="Sven Co-op install path")
 args = parser.parse_args()
-'''
 
-download_project_and_metadata(1488966)
-download_project_and_metadata(15643996)
-download_project_and_metadata(388838135)
+
+url_search = re.search('scratch.mit.edu/projects/([0-9]*)', args.url, re.IGNORECASE)
+if url_search:
+    project_id = url_search.group(1)
+    download_project_and_metadata(project_id)
