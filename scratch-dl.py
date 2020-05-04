@@ -125,11 +125,11 @@ def download_user(username):
     while True:
         print(f"Downloading {username}'s projects (page {offset+1})")
         r = requests.get(f"https://api.scratch.mit.edu/users/{username}/projects?limit=20&offset={offset*20}", headers=headers)
-        with open(f"projects_{offset}.json", 'wb') as f:
-            f.write(r.content)
         projects = json.loads(r.content)
         if len(projects) == 0:
             break
+        with open(f"projects_{offset}.json", 'wb') as f:
+            f.write(r.content)
         for project in projects:
             projectids.append(project["id"])
         offset += 1
