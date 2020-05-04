@@ -21,17 +21,24 @@ def download_asset_c(filename, counter, project_id):
     download_file(f"https://assets.scratch.mit.edu/internalapi/asset/{filename}/get/", f"{project_id}/{counter}.{filename.split('.')[-1]}")
 
 def download_project_and_metadata(project_id):
+    #skip existing
+    if (os.path.isfile(f"{project_id}.sb") or os.path.isfile(f"{project_id}.sb2") or os.path.isfile(f"{project_id}.sb3")) and os.path.isfile(f"{project_id}.json"):
+        print(f"Skipping {project_id} (already downloaded)")
+        return
     download_project(project_id)
     download_metadata(project_id)
 
 def download_metadata(project_id):
     project_id = str(int(project_id))
+    print(f"Downloading metadata for project {project_id}")
     download_file(f"https://api.scratch.mit.edu/projects/{project_id}",f"{project_id}.json")
+    download_file(f"https://cdn2.scratch.mit.edu/get_image/project/{project_id}_100000x100000.png",f"{project_id}.png")
 
 def download_project(project_id):
     # Verify the project id is a number so we don't end up corrupting the entire archive
     #TODO: improve this line
     project_id = str(int(project_id))
+    print(f"Downloading project {project_id}")
     r = requests.get(f"https://projects.scratch.mit.edu/{project_id}", headers=headers)
     version = 0
     if r.content[:9] == b'ScratchV0':
@@ -97,6 +104,34 @@ def download_project(project_id):
     shutil.rmtree(project_id)
     return {"success": True, "version": version}
 
+def download_user(username):
+    print(f"Downloading user {username}")
+    if not os.path.exists(username):
+        os.mkdir(username)
+    os.chdir(username)
+    r = requests.get(f"https://api.scratch.mit.edu/users/{username}", headers=headers)
+    with open(f"userinfo.json", 'wb') as f:
+        f.write(r.content)
+    userid = json.loads(r.content)["id"]
+    download_file(f"https://cdn2.scratch.mit.edu/get_image/user/{userid}_100000x100000.png","avatar.png")
+
+    projectids = []
+    offset = 0
+    while True:
+        print(f"Downloading {username}'s projects (page {offset+1})")
+        r = requests.get(f"https://api.scratch.mit.edu/users/{username}/projects?limit=20&offset={offset*20}", headers=headers)
+        with open(f"projects_{offset}.json", 'wb') as f:
+            f.write(r.content)
+        projects = json.loads(r.content)
+        if len(projects) == 0:
+            break
+        for project in projects:
+            projectids.append(project["id"])
+        offset += 1
+    for project in projectids:
+        download_project_and_metadata(project)
+    os.chdir("..")
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="url")
@@ -104,7 +139,10 @@ parser.add_argument("url", help="url")
 #parser.add_argument("-p", "--path", help="Sven Co-op install path")
 args = parser.parse_args()
 
-
+url_search = re.search('scratch.mit.edu/users/(.*)(/|$)', args.url, re.IGNORECASE)
+if url_search:
+    username = url_search.group(1)
+    download_user(username)
 url_search = re.search('scratch.mit.edu/projects/([0-9]*)', args.url, re.IGNORECASE)
 if url_search:
     project_id = url_search.group(1)
