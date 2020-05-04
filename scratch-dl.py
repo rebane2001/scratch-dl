@@ -25,8 +25,13 @@ def download_project_and_metadata(project_id):
     if (os.path.isfile(f"{project_id}.sb") or os.path.isfile(f"{project_id}.sb2") or os.path.isfile(f"{project_id}.sb3")) and os.path.isfile(f"{project_id}.json"):
         print(f"Skipping {project_id} (already downloaded)")
         return
-    download_project(project_id)
-    download_metadata(project_id)
+    try:
+        download_metadata(project_id)
+        download_project(project_id)
+    except:
+        print(f"Error downloading {project_id}")
+        with open("error.log", "a") as f:
+            f.write(f"Error downloading {project_id}\n")
 
 def download_metadata(project_id):
     project_id = str(int(project_id))
