@@ -120,6 +120,43 @@ def download_user(username):
     userid = json.loads(r.content)["id"]
     download_file(f"https://cdn2.scratch.mit.edu/get_image/user/{userid}_100000x100000.png","avatar.png")
 
+    # Download favorites
+    offset = 0
+    while True:
+        print(f"Downloading {username}'s favorites (page {offset+1})")
+        r = requests.get(f"https://api.scratch.mit.edu/users/{username}/favorites?limit=20&offset={offset*20}", headers=headers)
+        favorites = json.loads(r.content)
+        if len(favorites) == 0:
+            break
+        with open(f"favorites_{offset}.json", 'wb') as f:
+            f.write(r.content)
+        offset += 1
+
+    # Download following
+    offset = 0
+    while True:
+        print(f"Downloading {username}'s following (page {offset+1})")
+        r = requests.get(f"https://api.scratch.mit.edu/users/{username}/following?limit=20&offset={offset*20}", headers=headers)
+        following = json.loads(r.content)
+        if len(following) == 0:
+            break
+        with open(f"following_{offset}.json", 'wb') as f:
+            f.write(r.content)
+        offset += 1
+
+    # Download followers
+    offset = 0
+    while True:
+        print(f"Downloading {username}'s followers (page {offset+1})")
+        r = requests.get(f"https://api.scratch.mit.edu/users/{username}/followers?limit=20&offset={offset*20}", headers=headers)
+        followers = json.loads(r.content)
+        if len(followers) == 0:
+            break
+        with open(f"followers_{offset}.json", 'wb') as f:
+            f.write(r.content)
+        offset += 1
+
+    # Download projects
     projectids = []
     offset = 0
     while True:
