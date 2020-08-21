@@ -30,7 +30,7 @@ def download_project_and_metadata(project_id):
         download_project(project_id)
     except:
         print(f"Error downloading {project_id}")
-        with open("error.log", "a") as f:
+        with open("error.log", "w") as f:
             f.write(f"Error downloading {project_id}\n")
 
 def download_metadata(project_id):
