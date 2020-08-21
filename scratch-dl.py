@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 import requests
 import argparse
 import shutil
@@ -30,16 +31,18 @@ def download_project_and_metadata(project_id):
         download_project(project_id)
     except:
         print(f"Error downloading {project_id}")
-        with open("error.log", "a") as f:
+        with open("error.log", "a", encoding="UTF-8") as f:
             f.write(f"Error downloading {project_id}\n")
 
 def download_metadata(project_id):
+    """Download project metadata"""
     project_id = str(int(project_id))
     print(f"Downloading metadata for project {project_id}")
     download_file(f"https://api.scratch.mit.edu/projects/{project_id}",f"{project_id}.json")
     download_file(f"https://cdn2.scratch.mit.edu/get_image/project/{project_id}_100000x100000.png",f"{project_id}.png")
 
 def download_project(project_id):
+    """Download project"""
     # Verify the project id is a number so we don't end up corrupting the entire archive
     #TODO: improve this line
     project_id = str(int(project_id))
@@ -94,7 +97,7 @@ def download_project(project_id):
                     counter += 1
         # Backup original json
         os.rename(f"{project_id}/project.json",f"{project_id}/original.json")
-        with open(f"{project_id}/project.json", 'w') as f:
+        with open(f"{project_id}/project.json", 'w', encoding="UTF-8") as f:
             json.dump(project_json,f)
     else:
         # sb3 project
@@ -109,75 +112,70 @@ def download_project(project_id):
     shutil.rmtree(project_id)
     return {"success": True, "version": version}
 
+def download_user_pages(username,pagetype):
+    """Download paged metadata from user (projects, favorites, followers etc)"""
+    offset = 0
+    try:
+        downloadedcontent = []
+        while True:
+            print(f"Downloading {username}'s {pagetype} (page {offset+1})")
+            r = requests.get(f"https://api.scratch.mit.edu/users/{username}/{pagetype}?limit=20&offset={offset*20}", headers=headers)
+            content = json.loads(r.content)
+            if len(content) == 0:
+                break
+            downloadedcontent += content
+            offset += 1
+        # If there is any deleted content, append it to the end of the new file
+        if os.path.exists(f"{pagetype}.json"):
+            with open(f"{pagetype}.json", 'r', encoding="UTF-8") as f:
+                oldcontent = json.load(f)
+            existingids = []
+            for x in downloadedcontent:
+                existingids.append(x["id"])
+            for x in oldcontent:
+                if not x["id"] in existingids:
+                    downloadedcontent.append(x)
+        with open(f"{pagetype}.json", 'w', encoding="UTF-8") as f:
+            f.write(json.dumps(downloadedcontent))
+        return downloadedcontent
+    except:
+        print(f"Error downloading {username}'s {pagetype}")
+        with open("error.log", "a", encoding="UTF-8") as f:
+            f.write(f"Error downloading {username}'s {pagetype}\n")
+        return []
+
 def download_user(username):
+    """Download user account with metadata and projects"""
     print(f"Downloading user {username}")
     if not os.path.exists(username):
         os.mkdir(username)
     os.chdir(username)
+
     r = requests.get(f"https://api.scratch.mit.edu/users/{username}", headers=headers)
+    userid = json.loads(r.content)["id"]
     with open(f"userinfo.json", 'wb') as f:
         f.write(r.content)
-    userid = json.loads(r.content)["id"]
+
+    # Download user avatar at max resolution
     download_file(f"https://cdn2.scratch.mit.edu/get_image/user/{userid}_100000x100000.png","avatar.png")
 
-    # Download favorites
-    offset = 0
-    while True:
-        print(f"Downloading {username}'s favorites (page {offset+1})")
-        r = requests.get(f"https://api.scratch.mit.edu/users/{username}/favorites?limit=20&offset={offset*20}", headers=headers)
-        favorites = json.loads(r.content)
-        if len(favorites) == 0:
-            break
-        with open(f"favorites_{offset}.json", 'wb') as f:
-            f.write(r.content)
-        offset += 1
-
-    # Download following
-    offset = 0
-    while True:
-        print(f"Downloading {username}'s following (page {offset+1})")
-        r = requests.get(f"https://api.scratch.mit.edu/users/{username}/following?limit=20&offset={offset*20}", headers=headers)
-        following = json.loads(r.content)
-        if len(following) == 0:
-            break
-        with open(f"following_{offset}.json", 'wb') as f:
-            f.write(r.content)
-        offset += 1
-
-    # Download followers
-    offset = 0
-    while True:
-        print(f"Downloading {username}'s followers (page {offset+1})")
-        r = requests.get(f"https://api.scratch.mit.edu/users/{username}/followers?limit=20&offset={offset*20}", headers=headers)
-        followers = json.loads(r.content)
-        if len(followers) == 0:
-            break
-        with open(f"followers_{offset}.json", 'wb') as f:
-            f.write(r.content)
-        offset += 1
+    # Download pages of things
+    download_user_pages(username,"favorites")
+    download_user_pages(username,"following")
+    download_user_pages(username,"followers")
 
     # Download projects
-    projectids = []
-    offset = 0
-    while True:
-        print(f"Downloading {username}'s projects (page {offset+1})")
-        r = requests.get(f"https://api.scratch.mit.edu/users/{username}/projects?limit=20&offset={offset*20}", headers=headers)
-        projects = json.loads(r.content)
-        if len(projects) == 0:
-            break
-        with open(f"projects_{offset}.json", 'wb') as f:
-            f.write(r.content)
-        for project in projects:
-            projectids.append(project["id"])
-        offset += 1
-    for project in projectids:
-        download_project_and_metadata(project)
+    projects = download_user_pages(username,"projects")
+    for project in projects:
+        download_project_and_metadata(project["id"])
     os.chdir("..")
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("url", help="url")
 #TODO: Add option to download metadata separately
+#TODO: Better error logging
+#TODO: Turn this project into a module
 #parser.add_argument("-p", "--path", help="Sven Co-op install path")
 args = parser.parse_args()
 
