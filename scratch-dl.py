@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 import requests
 import argparse
@@ -176,7 +177,7 @@ parser.add_argument("url", help="url")
 #TODO: Add option to download metadata separately
 #TODO: Better error logging
 #TODO: Turn this project into a module
-parser.add_argument("-p", "--path", help="Sven Co-op install path", type=str)
+parser.add_argument("-p", "--path", help="Download path", type=str)
 args = parser.parse_args()
 
 if args.path:
