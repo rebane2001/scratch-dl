@@ -176,8 +176,11 @@ parser.add_argument("url", help="url")
 #TODO: Add option to download metadata separately
 #TODO: Better error logging
 #TODO: Turn this project into a module
-#parser.add_argument("-p", "--path", help="Sven Co-op install path")
+parser.add_argument("-p", "--path", help="Sven Co-op install path", type=str)
 args = parser.parse_args()
+
+if args.path:
+    os.chdir(args.path)
 
 url_search = re.search('scratch.mit.edu/users/(.*)(/|$)', args.url, re.IGNORECASE)
 if url_search:
