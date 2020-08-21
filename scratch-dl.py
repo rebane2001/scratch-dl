@@ -190,3 +190,7 @@ url_search = re.search('scratch.mit.edu/projects/([0-9]*)', args.url, re.IGNOREC
 if url_search:
     project_id = url_search.group(1)
     download_project_and_metadata(project_id)
+url_search = re.search('scratch.mit.edu/studios/([0-9]*)', args.url, re.IGNORECASE)
+if url_search:
+    # api endpoint: https://scratch.mit.edu/site-api/projects/in/{id}/1/
+    print("Downloading studios is not supported yet")
